@@ -1,6 +1,8 @@
 """实体合并：state + 注册表 → 统一视图。"""
 
 from _fixtures import make_entity, make_light
+
+# isort: split
 from ha_api.entities import (
     build_entity,
     filter_controllable,

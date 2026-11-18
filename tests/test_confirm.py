@@ -9,6 +9,8 @@ import time
 
 import pytest
 from _fixtures import make_alarm, make_garage, make_light, make_lock, make_sensor, make_switch, make_water_heater
+
+# isort: split
 from security import (
     REASON_AUTO_LOW,
     REASON_AUTO_MID,

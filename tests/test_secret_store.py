@@ -8,6 +8,8 @@
 import sys
 
 import pytest
+
+# isort: split
 import secret_store
 
 

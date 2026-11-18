@@ -6,6 +6,8 @@
 
 import pytest
 from _fixtures import make_all, make_cover, make_garage, make_light, make_lock, make_plain_light, make_switch
+
+# isort: split
 from resolver import AMBIGUOUS, NOT_FOUND, OK, EntityIndex, expand_targets, resolve_targets
 
 

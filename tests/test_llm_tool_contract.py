@@ -6,6 +6,8 @@
 
 import pytest
 from _fixtures import make_all, make_light, make_lock
+
+# isort: split
 from ha_api.client import EntitySnapshot
 
 # 服务调用成功后设备应该变成什么状态。用于驱动回读校验。

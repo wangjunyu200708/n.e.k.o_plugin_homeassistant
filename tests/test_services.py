@@ -20,6 +20,8 @@ from _fixtures import (
     make_valve,
     make_water_heater,
 )
+
+# isort: split
 from ha_api.services import ACTIONS, build_call, is_dangerous, scene_call
 
 

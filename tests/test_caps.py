@@ -11,6 +11,8 @@ from _fixtures import (
     make_plain_light,
     make_sensor,
 )
+
+# isort: split
 from ha_api.caps import UNSUPPORTED_DOMAINS, build_caps, caps_unit, is_read_only, is_supported
 
 

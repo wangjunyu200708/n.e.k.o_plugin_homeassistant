@@ -2,6 +2,8 @@
 
 import httpx
 import pytest
+
+# isort: split
 from ha_api.client import ConnectionInfo
 from ha_api.exceptions import HaAuthError, HaConnectionError, HaServiceError
 from ha_api.rest import AsyncHaRest, normalize_base_url
