@@ -141,6 +141,36 @@ class AsyncHaRest:
                 detail=exc.detail,
             ) from exc
 
+    # ── 对话（Assist 兜底）──────────────────────────────────────────────
+    async def conversation_process(
+        self,
+        text: str,
+        *,
+        language: str = "",
+        agent_id: str = "",
+        conversation_id: str = "",
+    ) -> dict[str, Any]:
+        """`POST /api/conversation/process`：把一句话交给 HA 自己的对话代理。
+
+        字段与响应结构见官方 Conversation API 文档：
+        ``{"text", "language", "agent_id", "conversation_id"}`` →
+        ``{"response": {"response_type", "data", "speech": {"plain": {"speech"}}},
+        "conversation_id", "continue_conversation"}``
+
+        `response_type` 三态：``action_done`` / ``query_answer`` / ``error``。
+        **不要把它当成可靠的控制通道**：HA 内置中文 intent 的覆盖度没有核实过，
+        这里只作兜底，失败要如实告诉用户，不能假装成功。
+        """
+        payload: dict[str, Any] = {"text": text}
+        if language:
+            payload["language"] = language
+        if agent_id:
+            payload["agent_id"] = agent_id
+        if conversation_id:
+            payload["conversation_id"] = conversation_id
+        result = await self._request("POST", "api/conversation/process", json=payload)
+        return result if isinstance(result, dict) else {}
+
     async def close(self) -> None:
         if self._owns_client:
             await self._client.aclose()

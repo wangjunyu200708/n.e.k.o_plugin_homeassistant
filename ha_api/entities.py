@@ -12,7 +12,7 @@ REST 单独拿不到区域名，这正是必须开 WebSocket 的原因；但 WS 
 匹配退回"按名字子串"，功能不残废。
 
 产出的实体是 **dict**（不是 dataclass）：它要整体写进 entities_cache.json，
-dict 省掉一层序列化，也让 `nlp/device_matcher.py` 不必为 HA 改写数据访问方式。
+dict 省掉一层序列化，也让 `resolver.py` 不必为 HA 改写数据访问方式。
 """
 
 from __future__ import annotations
@@ -59,6 +59,10 @@ KEPT_ATTRIBUTES = {
     "app_name",
     "percentage",
     "percentage_step",
+    "oscillating",
+    "operation_list",
+    "operation_mode",
+    "current_operation",
     "assumed_state",
 }
 
@@ -75,7 +79,7 @@ def _slim_attributes(attributes: Any) -> dict[str, Any]:
 def _registry_aliases(entry: dict[str, Any]) -> str:
     """注册表里的实体别名（HA 2024.10+）。
 
-    统一成逗号分隔字符串，与 `nlp/device_matcher.py` 的 `_alias_list()` 对齐；
+    统一成逗号分隔字符串，与 `resolver.py` 的 `_alias_list()` 对齐；
     插件自己的别名存在 aliases.json，合并时排在后面。
     """
     raw = entry.get("aliases")
@@ -116,6 +120,7 @@ def build_entity(
 
     aliases = [part for part in (_registry_aliases(registry), plugin_alias) if part]
     state = str(state_obj.get("state") or "")
+    caps = build_caps(domain, attributes)
 
     return {
         "entity_id": entity_id,
@@ -124,9 +129,11 @@ def build_entity(
         "area_name": area_name,
         "device_name": device_name,
         "alias": ",".join(aliases),
+        "device_class": str(attributes.get("device_class") or ""),
         "state": state,
         "attributes": attributes,
-        "caps": build_caps(domain, attributes),
+        "caps": caps,
+        "risk": caps.get("risk", "low"),
         "is_online": state not in OFFLINE_STATES,
         "disabled": bool(registry.get("disabled_by")),
         "hidden": bool(registry.get("hidden_by")),
@@ -218,6 +225,29 @@ def state_facts(entity: dict[str, Any]) -> dict[str, Any]:
     elif domain == "lock":
         facts["locked"] = state == "locked"
 
+    elif domain == "fan":
+        facts["power"] = state == "on"
+        if isinstance(attrs.get("percentage"), (int, float)):
+            facts["percentage"] = round(float(attrs["percentage"]))
+        if attrs.get("preset_mode"):
+            facts["preset"] = attrs["preset_mode"]
+
+    elif domain == "valve":
+        facts["open"] = state == "open"
+        facts["position"] = attrs.get("current_position")
+
+    elif domain == "water_heater":
+        facts["power"] = state != "off"
+        facts["operation"] = state
+        if isinstance(attrs.get("current_temperature"), (int, float)):
+            facts["current_temperature"] = attrs["current_temperature"]
+        if isinstance(attrs.get("temperature"), (int, float)):
+            facts["target_temperature"] = attrs["temperature"]
+
+    elif domain == "alarm_control_panel":
+        facts["armed"] = state.startswith("armed")
+        facts["arm_mode"] = state[len("armed_"):] if state.startswith("armed_") else ""
+
     elif domain in ("sensor", "binary_sensor"):
         facts["value"] = state
         if attrs.get("unit_of_measurement"):
@@ -230,7 +260,7 @@ def state_facts(entity: dict[str, Any]) -> dict[str, Any]:
 
 
 def filter_controllable(entities: list[dict[str, Any]], *, include_read_only: bool = False) -> list[dict[str, Any]]:
-    """过滤出可用于自然语言控制的实体。
+    """过滤出可用于控制的实体。
 
     隐藏实体默认排除（用户自己藏的），禁用实体一定排除；只读传感器默认不进
     控制候选表，但查询功能仍可命中——所以查询路径要把它们读进来。
@@ -239,9 +269,7 @@ def filter_controllable(entities: list[dict[str, Any]], *, include_read_only: bo
 
     out: list[dict[str, Any]] = []
     for entity in entities:
-        if entity.get("disabled"):
-            continue
-        if entity.get("hidden"):
+        if entity.get("disabled") or entity.get("hidden"):
             continue
         if not include_read_only and is_read_only(entity.get("domain", "")):
             continue

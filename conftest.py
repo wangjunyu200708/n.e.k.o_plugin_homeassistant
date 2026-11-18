@@ -140,7 +140,7 @@ def _load_plugin_root():
     """以 `homeassistant_plugin` 为包名加载根 `__init__.py`。
 
     `submodule_search_locations=[ROOT]` 让模块成为以仓库根为根目录的包，于是
-    `from .ha_api import ...` / `from .nlp import ...` 解析到真实子包。
+    `from .ha_api import ...` / `from .resolver import ...` 解析到真实子模块。
     """
     spec = importlib.util.spec_from_file_location(
         "homeassistant_plugin",
@@ -161,6 +161,14 @@ else:
     # pytest 会尝试 `import __init__`（仓库根在 pythonpath 上）。提前登记，
     # 让它命中已加载的模块，而不是重新执行一遍宿主 import。
     sys.modules.setdefault("__init__", plugin_root)
+
+    # 把包内子模块登记成顶层名（ha_api / ha_api.caps / security …）。
+    #
+    # 不这么做的话，测试里的 `import ha_api.services` 会**另外执行一次**模块，
+    # 于是同一个类出现两个副本（异常类 isinstance 失效、全局状态两套）。
+    # 别名让两条 import 路径指向同一个模块对象。
+    for _name in [name for name in list(sys.modules) if name.startswith("homeassistant_plugin.")]:
+        sys.modules.setdefault(_name.split(".", 1)[1], sys.modules[_name])
 
 
 @pytest.fixture

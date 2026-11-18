@@ -44,11 +44,18 @@ def make_light(name: str = "客厅吸顶灯", *, area: str = "客厅", state: st
     return make_entity("light.living_room_ceiling", name, state=state, area=area, attributes=attributes, **kwargs)
 
 
-def make_plain_light(name: str = "阳台灯", *, area: str = "阳台", state: str = "on", **kwargs) -> dict:
+def make_plain_light(
+    name: str = "阳台灯",
+    *,
+    area: str = "阳台",
+    state: str = "on",
+    entity_id: str = "light.balcony",
+    **kwargs,
+) -> dict:
     """只有 onoff 的灯：不可调亮度。"""
     attributes = {"supported_color_modes": ["onoff"]}
     attributes.update(kwargs.pop("attributes", {}))
-    return make_entity("light.balcony", name, state=state, area=area, attributes=attributes, **kwargs)
+    return make_entity(entity_id, name, state=state, area=area, attributes=attributes, **kwargs)
 
 
 def make_switch(name: str = "书房插座", *, area: str = "书房", state: str = "off", **kwargs) -> dict:
@@ -72,15 +79,28 @@ def make_climate(name: str = "主卧空调", *, area: str = "主卧", state: str
 
 
 def make_cover(
-    name: str = "客厅窗帘", *, area: str = "客厅", state: str = "open", device_class: str = "curtain", **kwargs
+    name: str = "客厅窗帘",
+    *,
+    area: str = "客厅",
+    state: str = "open",
+    device_class: str = "curtain",
+    entity_id: str = "cover.living_room_curtain",
+    **kwargs,
 ) -> dict:
     attributes = {"current_position": 70, "device_class": device_class}
     attributes.update(kwargs.pop("attributes", {}))
-    return make_entity("cover.living_room_curtain", name, state=state, area=area, attributes=attributes, **kwargs)
+    return make_entity(entity_id, name, state=state, area=area, attributes=attributes, **kwargs)
 
 
 def make_garage(name: str = "车库门", *, area: str = "车库", state: str = "closed", **kwargs) -> dict:
-    return make_cover(name, area=area, state=state, device_class="garage", **kwargs)
+    return make_cover(
+        name,
+        area=area,
+        state=state,
+        device_class="garage",
+        entity_id="cover.garage_door",
+        **kwargs,
+    )
 
 
 def make_media(name: str = "客厅音箱", *, area: str = "客厅", state: str = "playing", **kwargs) -> dict:
@@ -122,8 +142,44 @@ def make_sensor(name: str = "客厅温度", *, area: str = "客厅", state: str 
     )
 
 
+def make_fan(name: str = "卧室风扇", *, area: str = "卧室", state: str = "on", **kwargs) -> dict:
+    attributes = {
+        "percentage": 60,
+        "percentage_step": 1,
+        "preset_modes": ["normal", "natural", "sleep"],
+        "oscillating": True,
+    }
+    attributes.update(kwargs.pop("attributes", {}))
+    return make_entity("fan.bedroom", name, state=state, area=area, attributes=attributes, **kwargs)
+
+
+def make_valve(name: str = "燃气阀", *, area: str = "厨房", state: str = "closed", **kwargs) -> dict:
+    attributes = {"current_position": 0, "device_class": "gas"}
+    attributes.update(kwargs.pop("attributes", {}))
+    return make_entity("valve.gas_main", name, state=state, area=area, attributes=attributes, **kwargs)
+
+
+def make_water_heater(name: str = "热水器", *, area: str = "卫生间", state: str = "off", **kwargs) -> dict:
+    attributes = {
+        "min_temp": 30,
+        "max_temp": 60,
+        "target_temp_step": 1,
+        "temperature": 45,
+        "operation_list": ["off", "eco", "electric", "gas"],
+    }
+    attributes.update(kwargs.pop("attributes", {}))
+    return make_entity("water_heater.bathroom", name, state=state, area=area, attributes=attributes, **kwargs)
+
+
+def make_alarm(name: str = "安防面板", *, area: str = "玄关", state: str = "disarmed", **kwargs) -> dict:
+    # ARM_HOME(1) | ARM_AWAY(2) | ARM_NIGHT(4)
+    attributes = {"supported_features": 1 + 2 + 4}
+    attributes.update(kwargs.pop("attributes", {}))
+    return make_entity("alarm_control_panel.home", name, state=state, area=area, attributes=attributes, **kwargs)
+
+
 def make_all() -> list[dict]:
-    """一套覆盖六大 domain 的实体表，供路由/多指令测试使用。"""
+    """一套覆盖全部可控 domain 的实体表，供工具层测试使用。"""
     return [
         make_light(),
         make_plain_light(),
@@ -131,6 +187,12 @@ def make_all() -> list[dict]:
         make_climate(),
         make_cover(),
         make_media(),
+        make_fan(),
+        make_lock(),
+        make_valve(),
+        make_water_heater(),
+        make_alarm(),
+        make_garage(),
         make_scene("回家", entity_id="scene.home_arrival"),
         make_scene("晚安", entity_id="scene.good_night"),
         make_sensor(),

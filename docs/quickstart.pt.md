@@ -24,7 +24,7 @@ Remova o **caminho da página** no final, deixando apenas `esquema://host:porta`
 4. Clique em **«Criar token»**, escolha qualquer nome (ex.: `N.E.K.O`)
 5. **Copie imediatamente** — a string `eyJ0eXAiOiJKV1Qi...` aparece apenas uma vez
 
-> Esse token equivale às permissões da sua conta. O plugin guarda em `plugins/homeassistant/data/credential.json` (escrita atômica, permissões restritas) e exibe apenas os últimos 4 caracteres. **Nunca** cole em chat ou em captura de tela.
+> Esse token equivale às permissões da sua conta. O plugin guarda **criptografado**: DPAPI no Windows (vinculado ao seu usuário e máquina), o chaveiro do sistema nas demais plataformas. Se nenhum estiver disponível, fica apenas na memória e precisa ser digitado de novo após reiniciar; **nunca** é gravado em texto puro. Apenas os últimos 4 caracteres são exibidos. **Nunca** cole em chat ou em captura de tela.
 
 ---
 
@@ -53,43 +53,50 @@ Basta falar com seu companheiro de AI:
 | Mídia | `volume da caixa 30` / `silencia a TV` / `pausa` |
 | Cenas | `executa a cena chegar em casa` / `ativa o modo ausente` |
 
-Também entende valores aproximados: `pela metade` = 50 %, `quase tudo` = 70 %, `o mais claro` / `o mais escuro` / `mínimo` / `máximo`, `um pouco mais`, `abaixa 10`, decimais como `26.5 graus`.
+**A compreensão fica com o modelo de chat do N.E.K.O.** O plugin não analisa o texto. Por isso «metade» ou «um pouco mais» também funcionam: o modelo converte em `brightness: 50` ou pergunta antes um valor concreto. Quanto mais vago o pedido, mais provável que ele pergunte — o que é melhor do que agir no dispositivo errado.
 
 ---
 
 ## 4. Dispositivos demais?
 
-Com três luzes em casa, `acende a luz` dispara desambiguação:
+Com três luzes em casa, `acende a luz` retorna «vários coincidem» e o assistente pergunta qual:
 
 ```
-Encontrados 3 dispositivos para «luz»:
-1. 🟢 Sala Luminária de teto
-2. 🔴 Quarto Luminária de teto
-3. 🟢 Hall Downlight
-Especifique com «área + dispositivo», por exemplo «quarto luminária de teto»
+3 dispositivos «luz» coincidem:
+1. Sala Luminária de teto (light.living_room_ceiling)
+2. Quarto Luminária de teto (light.bedroom_ceiling)
+3. Hall Spot embutido (light.hallway_downlight)
 ```
 
-Duas saídas:
+**O plugin nunca escolhe um por você** — prefere perguntar uma vez a errar. Três saídas:
 
-- **Adicione a área**: `acende a luminária de teto do quarto` (as áreas vêm das configurações de «Áreas» do HA, não as invente)
-- **Defina um alias**: no painel, dê a `light.yeelight_ceiling_2` o nome que você realmente usa, por exemplo «luz principal»
+- **Seja mais específico**: `acende a luminária do quarto` (nomes de área vêm das Áreas do HA, não são inventados)
+- **Use um alias**: no painel, dê à entidade o nome que você realmente usa — por exemplo, renomeie `light.yeelight_ceiling_2` para «luz principal»
+- **Diga a área**: `apaga todas as luzes do escritório` — o assistente lista antes as luzes daquela área e envia uma a uma após você confirmar
 
 ---
 
 ## 5. Confirmação de segurança
 
-Portões de garagem, portões e fechaduras **nunca são executados diretamente**. O plugin devolve um código de confirmação de 8 caracteres:
+O plugin gerencia permissões em três níveis de risco, e **dispositivos de alto risco não são controláveis por padrão**:
+
+| Nível | Dispositivos | Padrão |
+| --- | --- | --- |
+| Baixo | luzes, ventiladores, players, cenas, cortinas comuns | permitido |
+| Médio | interruptores/tomadas, climatização | permitido (marcado no painel) |
+| Alto | fechaduras, painéis de alarme, válvulas, aquecedores, portas de garagem | **bloqueado** |
+
+Dispositivos de alto risco só são habilitados **um a um** no painel; não existe «selecionar todas as fechaduras». Mesmo assim, cada ação exige uma segunda confirmação: a autorização decide *se você pode* controlar, não *se ele pergunta antes*:
 
 ```
-> abre o portão da garagem
-< Vou executar «abre o portão da garagem». Há implicações de segurança. Código: a3f9c1d2
-  Responda com esse código em 120 segundos para continuar.
+> abre a porta da frente
+< Ação de alto risco, não executada. Vou executar «unlock» em «Fechadura da porta». Código: a3f9c1d2 (válido 120 s)
 
 > a3f9c1d2
-< Feito: abre o portão da garagem
+< Feito: lock.unlock — a releitura confirma «unlocked»
 ```
 
-O código fica apenas na memória do processo, é **de uso único**, só o mais recente é mantido e expira em 120 s. Reiniciar o host o invalida.
+O código é de uso único, vinculado a «dispositivos + ação + parâmetros», morre se você trocar o alvo e expira em 120 s. Direções que tornam o mundo **mais seguro** — apagar, trancar, armar — nunca são barradas.
 
 ---
 
@@ -131,8 +138,8 @@ R: Os registries WebSocket não estão disponíveis (`get_status` mostra o motiv
 **P: Dispositivos novos não aparecem.**
 R: Clique em «Atualizar dispositivos» no painel. O snapshot de entidades tem cache de 60 segundos.
 
-**P: Aspirador robô / ventilador / fechadura?**
-R: No momento o foco são seis domains básicos (light, switch, climate, cover, media_player, scene). Para os demais o plugin avisa claramente que não há suporte, em vez de fingir sucesso.
+**Q: Suporta aspirador robô / umidificador / fechadura?**
+A: Fechaduras sim, mas são de alto risco: habilite uma a uma no painel e cada ação passa por uma segunda confirmação. Ventiladores, válvulas, aquecedores, painéis de alarme e scripts também são suportados. Aspiradores robô, umidificadores e câmeras ainda não são controláveis — o plugin diz isso claramente em vez de fingir. Sensores não são controláveis, mas **podem ser consultados**.
 
 ---
 *Versão do documento: 2026-11-18*

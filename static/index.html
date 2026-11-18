@@ -94,6 +94,15 @@
     .state.on { color: var(--ok); }
     .state.off { color: var(--muted); }
     .state.bad { color: var(--danger); }
+    .risk {
+      display: inline-block; padding: 1px 7px; border-radius: 999px;
+      font-size: 11px; border: 1px solid var(--border); color: var(--muted);
+    }
+    .risk.high { color: var(--danger); border-color: var(--danger); }
+    .risk.mid { color: var(--warn); border-color: var(--warn); }
+    .risk.low { color: var(--ok); border-color: var(--ok); }
+    td.pick { text-align: center; width: 62px; }
+    td.pick input { width: auto; cursor: pointer; }
     .empty { color: var(--muted); font-size: 13px; padding: 10px 0; }
     .table-scroll { max-height: 420px; overflow: auto; }
     .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
@@ -143,10 +152,12 @@
       <button id="btnDisconnect" class="danger" data-i18n="panel.action.disconnect">断开连接</button>
     </div>
     <p class="hint" data-i18n="panel.hint.token"></p>
+    <p class="hint" id="tokenHint"></p>
   </section>
 
   <section class="stats">
     <div class="stat"><div class="k" data-i18n="panel.stats.entities">设备</div><div class="v" id="statEntities">–</div></div>
+    <div class="stat"><div class="k" data-i18n="panel.stat.allowed">可控设备</div><div class="v" id="statAllowed">–</div></div>
     <div class="stat"><div class="k" data-i18n="panel.stats.areas">区域</div><div class="v" id="statAreas">–</div></div>
     <div class="stat"><div class="k" data-i18n="panel.stats.version">HA 版本</div><div class="v small" id="statVersion">–</div></div>
     <div class="stat"><div class="k" data-i18n="panel.stats.location">位置</div><div class="v small" id="statLocation">–</div></div>
@@ -157,6 +168,7 @@
       <h2 style="margin:0" data-i18n="panel.devices.title">设备列表</h2>
       <button id="btnRefresh" data-i18n="panel.action.refresh">刷新设备</button>
     </div>
+    <p class="hint" style="margin:0 0 10px" data-i18n="panel.whitelist.hint"></p>
     <div class="table-scroll">
       <table>
         <thead>
@@ -164,6 +176,8 @@
             <th data-i18n="panel.devices.col.name">名称</th>
             <th data-i18n="panel.devices.col.area">区域</th>
             <th data-i18n="panel.devices.col.state">状态</th>
+            <th data-i18n="panel.devices.col.risk">风险</th>
+            <th data-i18n="panel.devices.col.allowed">允许控制</th>
             <th data-i18n="panel.devices.col.alias">别名</th>
           </tr>
         </thead>
@@ -242,6 +256,7 @@
     badge: document.getElementById('statusBadge'),
     statusText: document.getElementById('statusText'),
     statEntities: document.getElementById('statEntities'),
+    statAllowed: document.getElementById('statAllowed'),
     statAreas: document.getElementById('statAreas'),
     statVersion: document.getElementById('statVersion'),
     statLocation: document.getElementById('statLocation'),
@@ -249,6 +264,7 @@
     empty: document.getElementById('deviceEmpty'),
     queryName: document.getElementById('queryName'),
     message: document.getElementById('statusMessage'),
+    tokenHint: document.getElementById('tokenHint'),
   };
 
   function showMessage(text, kind = 'info') {
@@ -290,32 +306,100 @@
   function renderEntities(entities) {
     const list = Array.isArray(entities) ? entities : [];
     el.rows.innerHTML = '';
+    let allowedCount = 0;
     list.slice(0, 300).forEach((entity) => {
       const tr = document.createElement('tr');
 
       const nameCell = document.createElement('td');
       nameCell.textContent = entity.name || entity.entity_id || '';
-      const domainCell = document.createElement('td');
-      domainCell.textContent = entity.area_name || '–';
+      const areaCell = document.createElement('td');
+      areaCell.textContent = entity.area_name || '–';
       const stateCell = document.createElement('td');
       stateCell.textContent = entity.state || '';
       stateCell.className = `state ${stateClass(entity.state)}`;
+
+      const riskCell = document.createElement('td');
+      const risk = entity.risk || (entity.caps && entity.caps.risk) || '';
+      const riskTag = document.createElement('span');
+      riskTag.className = `risk ${risk}`;
+      riskTag.textContent = I18n.t(`panel.risk.${risk}`, risk);
+      riskCell.appendChild(riskTag);
+
+      // 授权勾选：高危设备也能勾，但只能一台一台勾——这正是草案要的粒度。
+      const pickCell = document.createElement('td');
+      pickCell.className = 'pick';
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = Boolean(entity.allowed);
+      // 不支持控制的 domain（传感器、扫地机、摄像头）勾了也没用，直接禁用。
+      if (entity.allowed_reason === 'unsupported') {
+        box.disabled = true;
+        box.checked = false;
+      }
+      box.title = entity.allowed_reason || '';
+      box.addEventListener('change', () => toggleAllowed(entity, box));
+      pickCell.appendChild(box);
+      if (entity.allowed) allowedCount += 1;
+
       const aliasCell = document.createElement('td');
       aliasCell.textContent = entity.alias || '';
 
-      tr.append(nameCell, domainCell, stateCell, aliasCell);
+      tr.append(nameCell, areaCell, stateCell, riskCell, pickCell, aliasCell);
       el.rows.appendChild(tr);
     });
     el.empty.style.display = list.length ? 'none' : 'block';
     el.statEntities.textContent = String(list.length);
+    el.statAllowed.textContent = String(allowedCount);
+  }
+
+  async function toggleAllowed(entity, box) {
+    const entityId = entity.entity_id || '';
+    if (!entityId) return;
+    const wanted = box.checked;
+    box.disabled = true;
+    try {
+      await callPlugin('set_entity_allowed', { entity_id: entityId, allowed: wanted });
+      entity.allowed = wanted;
+      const total = Number(el.statAllowed.textContent || 0);
+      el.statAllowed.textContent = String(wanted ? total + 1 : Math.max(0, total - 1));
+    } catch (error) {
+      box.checked = !wanted;  // 失败就把开关弹回去，别让界面撒谎
+      showMessage(`${I18n.t('panel.msg.failed', '操作失败')}: ${error.message}`, 'error');
+    } finally {
+      box.disabled = false;
+    }
+  }
+
+  function renderTokenHint(data) {
+    if (!data || !data.connection || !data.connection.configured) {
+      el.tokenHint.textContent = '';
+      return;
+    }
+    if (data.token_persisted) {
+      const backend = data.secret_backend || 'dpapi';
+      // I18n.t 只做 key → 文案，占位符由调用处替换（i18n.js 是跨插件共用副本，不动它）
+      el.tokenHint.textContent = I18n.t(
+        'panel.hint.encrypted',
+        `令牌已加密保存在本机（${backend}），只有当前用户能解开。`
+      ).replace('{backend}', backend);
+    } else {
+      el.tokenHint.textContent = I18n.t(
+        'panel.hint.noEncrypt',
+        '当前系统没有可用的加密后端，令牌只保存在内存中——重启 N.E.K.O 后需要重新填写。'
+      );
+    }
   }
 
   async function loadStatus() {
     const data = await callPlugin('get_status', {});
     renderConnection(data.connection || {});
     renderEntities(data.entities || []);
+    renderTokenHint(data);
     if (typeof data.area_count === 'number' && data.area_count > 0) {
       el.statAreas.textContent = String(data.area_count);
+    }
+    if (typeof data.controllable_count === 'number') {
+      el.statAllowed.textContent = String(data.controllable_count);
     }
     if (data.degraded) {
       showMessage(data.degraded, 'info');
@@ -385,9 +469,9 @@
     setBusy(true);
     hideMessage();
     try {
-      await callPlugin('reload_entities', {});
+      const result = await callPlugin('reload_entities', {});
       await loadStatus();
-      showMessage(I18n.t('panel.msg.tested', '连接成功'), 'ok');
+      showMessage(result.message || '', 'ok');
     } catch (error) {
       showMessage(`${I18n.t('panel.msg.failed', '操作失败')}: ${error.message}`, 'error');
     } finally {

@@ -24,7 +24,7 @@ Strip the trailing page path so only `scheme://host:port` remains. For example `
 4. Click **Create token**, name it anything (e.g. `N.E.K.O`)
 5. **Copy it immediately** — the `eyJ0eXAiOiJKV1Qi...` string is shown only once
 
-> This token carries your account's permissions. The plugin stores it at `plugins/homeassistant/data/credential.json` (atomic write, tightened permissions) and only echoes the last 4 characters. **Never** paste it into a chat window or screenshot.
+> This token carries your account's permissions. The plugin stores it **encrypted**: DPAPI on Windows (bound to your user and this machine), the system keychain elsewhere. If neither is available it stays in memory only and must be re-entered after a restart — it is **never** written in plain text. Only the last 4 characters are ever echoed. **Never** paste it into a chat window or screenshot.
 
 ---
 
@@ -53,43 +53,50 @@ Just talk to your AI companion:
 | Media | `speaker volume 30` / `mute the TV` / `pause` |
 | Scene | `run the coming home scene` / `trigger away mode` |
 
-Fractions and vague values work too: `halfway` = 50 %, `mostly` = 70 %, `brightest` / `dimmest` / `lowest` / `highest`, `a bit louder`, `volume down by 10`, decimals like `26.5 degrees`.
+**Understanding happens in N.E.K.O's chat model** — the plugin does no text parsing of its own. Vague phrasing still works: the model turns "halfway" into `brightness: 50`, or simply asks you for a number first. The vaguer the request, the more likely it asks — which beats guessing the wrong device.
 
 ---
 
 ## 4. Too many devices?
 
-With three lights at home, `turn on the light` triggers disambiguation:
+With three lights at home, `turn on the light` comes back as "matched several" and the assistant asks which one:
 
 ```
-Found 3 devices matching "light":
-1. 🟢 Living Room Ceiling Light
-2. 🔴 Bedroom Ceiling Light
-3. 🟢 Hallway Downlight
-Please specify with "area + device", e.g. "bedroom ceiling light"
+Matched 3 "light" devices:
+1. Living Room Ceiling Light (light.living_room_ceiling)
+2. Bedroom Ceiling Light (light.bedroom_ceiling)
+3. Hallway Downlight (light.hallway_downlight)
 ```
 
-Two ways out:
+**The plugin never picks one for you** — it would rather ask once than guess wrong. Three ways out:
 
-- **Add the area name**: `turn on the bedroom ceiling light` (area names come from HA's Areas settings, not ones you invent)
-- **Set an alias**: in the panel, give an entity the name you actually use — e.g. rename `light.yeelight_ceiling_2` to "main light"
+- **Say more**: `turn on the bedroom ceiling light` (area names come from HA's Areas settings, not ones you invent)
+- **Use an alias**: in the panel, give an entity the name you actually use — e.g. rename `light.yeelight_ceiling_2` to "main light"
+- **Name an area**: `turn off all the lights in the study` — the assistant lists that area's lights first, then sends them one by one after you confirm
 
 ---
 
 ## 5. Safety confirmation
 
-Garage doors, gates and locks are never executed directly. The plugin returns an 8-character confirmation code:
+The plugin manages permissions in three risk tiers, and **high-risk devices are not controllable at all by default**:
+
+| Tier | Devices | Default |
+| --- | --- | --- |
+| Low | lights, fans, media players, scenes, ordinary curtains | allowed |
+| Medium | switches/plugs, climate | allowed (flagged in the panel) |
+| High | locks, alarm panels, valves, water heaters, garage/gate doors | **blocked** |
+
+High-risk devices can only be enabled **one at a time** in the panel; there is no "select all locks". Even then every action still needs a second confirmation — authorization decides *whether* you may control it, not *whether it asks first*:
 
 ```
-> open the garage door
-< About to run "open the garage door" — this has safety implications. Code: a3f9c1d2
-  Reply with that code within 120 seconds to continue.
+> open the front door
+< High-risk action, nothing executed yet. About to run "unlock" on "Front Door Lock". Code: a3f9c1d2 (valid 120 s)
 
 > a3f9c1d2
-< Done: open the garage door
+< Done: lock.unlock — read-back confirms "unlocked"
 ```
 
-The code lives in process memory only, is single-use, only the newest one is kept, and expires after 120 s. A host restart invalidates it.
+The code is single-use, bound to "devices + action + params", dies if you change the target, and expires after 120 s. Directions that make the world *safer* — turning off, locking, arming — are never held up.
 
 ---
 
@@ -131,8 +138,8 @@ A: The WebSocket registries are unavailable (`get_status` shows the degradation 
 **Q: Newly added devices are missing.**
 A: Click "Refresh devices" in the panel. The entity snapshot is cached for 60 seconds.
 
-**Q: Vacuum / fan / lock support?**
-A: Currently focused on six core domains: light, switch, climate, cover, media_player, scene. Anything else is explicitly reported as unsupported rather than silently pretended.
+**Q: Vacuum / humidifier / lock support?**
+A: Locks are supported, but they are high-risk: enable them individually in the panel, and every action still goes through a second confirmation. Fans, valves, water heaters, alarm panels and scripts are supported too. Vacuums, humidifiers and cameras are not controllable yet — the plugin says so explicitly instead of pretending. Sensors cannot be controlled but **can be queried**.
 
 ---
 *Doc version: 2026-11-18*

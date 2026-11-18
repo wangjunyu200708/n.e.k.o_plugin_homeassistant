@@ -78,8 +78,10 @@ class TestOthers:
     def test_lock_is_dangerous(self):
         assert make_lock()["caps"]["dangerous"] == ["unlock"]
 
-    def test_sensor_has_no_caps(self):
-        assert make_sensor()["caps"] == {}
+    def test_sensor_has_no_controllable_caps(self):
+        # risk 是唯一必然存在的键（白名单与工具都读它），其余一个都不能有。
+        caps = make_sensor()["caps"]
+        assert caps == {"risk": "low"}
 
 
 class TestHelpers:

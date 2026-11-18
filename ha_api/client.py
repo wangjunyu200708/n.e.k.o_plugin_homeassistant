@@ -233,6 +233,11 @@ class AsyncHaClient:
     async def call(self, call: ServiceCall) -> Any:
         return await self._rest.call_service(call.domain, call.service, call.data)
 
+    # ── Assist 兜底 ─────────────────────────────────────────────────────
+    async def ask(self, text: str, *, language: str = "") -> dict[str, Any]:
+        """交给 HA 内置对话代理。覆盖度不保证，只作兜底。"""
+        return await self._rest.conversation_process(text, language=language)
+
     async def close(self) -> None:
         await self._rest.close()
 
