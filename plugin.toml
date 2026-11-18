@@ -4,7 +4,7 @@ name = "Home Assistant 智能家居"
 description = "控制 Home Assistant 中的灯光、空调、窗帘、影音、门锁与场景（需已有一个在运行的 Home Assistant 实例）"
 short_description = "Control lights, climate, covers, media players, locks and scenes in your existing Home Assistant with natural language."
 keywords = ["Home Assistant", "(?i)home.?assistant", "(?i)hass", "HA", "智能家居", "(?i)smart.?home", "开灯", "关灯", "空调", "窗帘", "音量", "场景", "门锁", "(?i)light", "(?i)climate", "(?i)cover", "(?i)media.?player", "(?i)lock", "(?i)scene"]
-version = "2.0.0"
+version = "1.0.0"
 entry = "plugin.plugins.homeassistant:HomeAssistantPlugin"
 
 [plugin.author]

@@ -423,8 +423,8 @@ class HomeAssistantPlugin(NekoPluginBase):
         """读凭据。三条通道依次尝试，最后才看历史遗留的明文文件。
 
         顺序：加密文件（DPAPI）→ 系统钥匙串 → 明文文件（迁移后删除）。
-        明文分支只为兼容 v1.0.0 落下的 `credential.json`，读到就立刻转存加密
-        并删掉明文。
+        明文分支只为兼容早期构建落下的 `credential.json`（那时还没有加密存储），
+        读到就立刻转存加密并删掉明文。首次安装的用户不会走到这条分支。
         """
         blob_path = self._data_path("credential.bin")
         try:
