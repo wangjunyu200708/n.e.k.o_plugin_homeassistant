@@ -1,0 +1,20 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+store.db
+
+# 凭据与缓存的兜底默认位置（运行时实际落在宿主数据目录 plugins/homeassistant/data/）
+.homeassistant/
+# 令牌文件兜底：任何位置都不许入库
+credential.json
+.credential-*.tmp
+# 实体快照缓存含家庭设备拓扑，不入库
+entities_cache.json
+aliases.json
+
+# 本地指令文件，不提交
+AGENTS.md
+
+# 本地调试脚本不放仓库内，统一放在仓库外的 E:\n.e.k.o_plugin_homeassistant_local\
+# （CI 的 ruff 用 --no-respect-gitignore 全量扫描目录，.gitignore 挡不住它）

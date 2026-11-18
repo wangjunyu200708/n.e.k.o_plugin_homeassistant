@@ -1,0 +1,13 @@
+# Home Assistant 智能家居 · 运行时配置样例
+#
+# 本文件是运行时配置的种子：宿主首次加载插件时会读取它，
+# 用户在面板里改动后写入 data 目录下的 config.toml，此后以 config.toml 为准。
+# 不要在这里放 [plugin] 段（清单信息只属于 plugin.toml）。
+
+[plugin_runtime]
+# 是否启用插件
+enabled = true
+# 是否随宿主启动。
+# 保持 false：本插件采用懒启动 —— 首次收到对话指令或打开面板时才连接 HA，
+# 避免宿主开机时因为 HA 暂时不可达而拖慢启动。
+auto_start = false

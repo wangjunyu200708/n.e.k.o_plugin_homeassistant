@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home Assistant 智能家居</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --card: #ffffff;
+      --text: #1f2328;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --primary: #2563eb;
+      --primary-weak: #dbeafe;
+      --danger: #dc2626;
+      --ok: #059669;
+      --warn: #b45309;
+      --radius: 10px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #16181d;
+        --card: #1e2128;
+        --text: #e8eaed;
+        --muted: #9aa1ad;
+        --border: #2f3540;
+        --primary: #60a5fa;
+        --primary-weak: #1e3a5f;
+        --danger: #f87171;
+        --ok: #34d399;
+        --warn: #fbbf24;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    .wrap { max-width: 940px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+    header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    header h1 { font-size: 19px; margin: 0; font-weight: 650; }
+    .subtitle { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 10px; border-radius: 999px; font-size: 12px;
+      border: 1px solid var(--border); background: var(--card); color: var(--muted);
+    }
+    .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+    .badge.on { color: var(--ok); border-color: var(--ok); }
+    .badge.on .dot { background: var(--ok); }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 16px;
+    }
+    .card h2 { font-size: 14px; margin: 0 0 12px; font-weight: 600; }
+    .steps { margin: 0 0 14px; padding-left: 18px; color: var(--muted); font-size: 13px; }
+    .steps li { margin: 2px 0; }
+    label { display: block; margin-bottom: 10px; font-size: 13px; }
+    label span { display: block; margin-bottom: 4px; color: var(--muted); font-size: 12px; }
+    input {
+      width: 100%; padding: 8px 10px; font-size: 13px; font-family: inherit;
+      color: var(--text); background: var(--bg);
+      border: 1px solid var(--border); border-radius: 7px;
+    }
+    input:focus { outline: 2px solid var(--primary-weak); border-color: var(--primary); }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      padding: 8px 14px; font-size: 13px; font-family: inherit; cursor: pointer;
+      border-radius: 7px; border: 1px solid var(--border);
+      background: var(--card); color: var(--text);
+    }
+    button:hover { border-color: var(--primary); color: var(--primary); }
+    button.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+    button.primary:hover { opacity: .9; color: #fff; }
+    button.danger { color: var(--danger); border-color: var(--danger); }
+    .hint { margin: 12px 0 0; font-size: 12px; color: var(--muted); }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+    .stat { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; }
+    .stat .k { font-size: 12px; color: var(--muted); }
+    .stat .v { font-size: 20px; font-weight: 650; margin-top: 2px; }
+    .stat .v.small { font-size: 14px; font-weight: 500; word-break: break-all; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 500; font-size: 12px; }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: var(--bg); }
+    .state { font-variant-numeric: tabular-nums; }
+    .state.on { color: var(--ok); }
+    .state.off { color: var(--muted); }
+    .state.bad { color: var(--danger); }
+    .empty { color: var(--muted); font-size: 13px; padding: 10px 0; }
+    .table-scroll { max-height: 420px; overflow: auto; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .status-bar {
+      display: none; padding: 9px 12px; border-radius: 8px; font-size: 13px;
+      border: 1px solid var(--border); background: var(--card); white-space: pre-wrap;
+    }
+    .status-bar.show { display: block; }
+    .status-bar.ok { border-color: var(--ok); color: var(--ok); }
+    .status-bar.error { border-color: var(--danger); color: var(--danger); }
+    .status-bar.info { border-color: var(--primary); color: var(--primary); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1 data-i18n="plugin.name">Home Assistant 智能家居</h1>
+      <p class="subtitle" data-i18n="panel.subtitle">连接你的 Home Assistant，用一句话控制全屋设备。</p>
+    </div>
+    <span class="badge" id="statusBadge">
+      <span class="dot"></span>
+      <span id="statusText" data-i18n="panel.status.disconnected">未连接</span>
+    </span>
+  </header>
+
+  <section class="card">
+    <h2 data-i18n="panel.setup.title">三步接入</h2>
+    <ol class="steps">
+      <li data-i18n="panel.setup.step1">1. 填入 Home Assistant 地址</li>
+      <li data-i18n="panel.setup.step2">2. 在 HA「个人资料 → 安全 → 长期访问令牌」创建令牌并粘贴</li>
+      <li data-i18n="panel.setup.step3">3. 点「保存并连接」，之后就能用自然语言控制设备</li>
+    </ol>
+    <label>
+      <span data-i18n="panel.field.baseUrl">Home Assistant 地址</span>
+      <input id="baseUrl" type="text" autocomplete="off" spellcheck="false"
+             placeholder="http://192.168.1.10:8123" data-i18n-placeholder="panel.ph.baseUrl">
+    </label>
+    <label>
+      <span data-i18n="panel.field.token">长期访问令牌</span>
+      <input id="token" type="password" autocomplete="off" spellcheck="false"
+             placeholder="在 HA 的「个人资料 → 安全」中创建" data-i18n-placeholder="panel.ph.token">
+    </label>
+    <div class="row">
+      <button id="btnTest" data-i18n="panel.action.test">测试连接</button>
+      <button id="btnSave" class="primary" data-i18n="panel.action.save">保存并连接</button>
+      <button id="btnDisconnect" class="danger" data-i18n="panel.action.disconnect">断开连接</button>
+    </div>
+    <p class="hint" data-i18n="panel.hint.token"></p>
+  </section>
+
+  <section class="stats">
+    <div class="stat"><div class="k" data-i18n="panel.stats.entities">设备</div><div class="v" id="statEntities">–</div></div>
+    <div class="stat"><div class="k" data-i18n="panel.stats.areas">区域</div><div class="v" id="statAreas">–</div></div>
+    <div class="stat"><div class="k" data-i18n="panel.stats.version">HA 版本</div><div class="v small" id="statVersion">–</div></div>
+    <div class="stat"><div class="k" data-i18n="panel.stats.location">位置</div><div class="v small" id="statLocation">–</div></div>
+  </section>
+
+  <section class="card">
+    <div class="toolbar">
+      <h2 style="margin:0" data-i18n="panel.devices.title">设备列表</h2>
+      <button id="btnRefresh" data-i18n="panel.action.refresh">刷新设备</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th data-i18n="panel.devices.col.name">名称</th>
+            <th data-i18n="panel.devices.col.area">区域</th>
+            <th data-i18n="panel.devices.col.state">状态</th>
+            <th data-i18n="panel.devices.col.alias">别名</th>
+          </tr>
+        </thead>
+        <tbody id="deviceRows"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="deviceEmpty" data-i18n="panel.devices.empty">还没有设备。连接成功后点「刷新设备」。</div>
+  </section>
+
+  <section class="card">
+    <h2 data-i18n="panel.control.title">查询设备状态</h2>
+    <div class="row">
+      <input id="queryName" type="text" autocomplete="off"
+             placeholder="输入设备名，如：客厅灯" data-i18n-placeholder="panel.control.ph"
+             style="flex:1;min-width:180px">
+      <button id="btnQuery" data-i18n="panel.control.execute">查询</button>
+    </div>
+  </section>
+
+  <div class="status-bar" id="statusMessage"></div>
+</div>
+
+<script src="i18n.js"></script>
+<script>
+  const PLUGIN_ID = 'homeassistant';
+  const RUNS_URL = '/runs';
+
+  /**
+   * 调插件入口：POST /runs 建任务 → 轮询 → 取 export。
+   *
+   * export 的形状随宿主版本略有差异：有的把 Ok 的 value 直接放在 json 里，
+   * 有的包一层 {success, data}。这里都兼容，避免升级宿主后整个面板空白。
+   */
+  async function callPlugin(entry, args = {}) {
+    const createResp = await fetch(RUNS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plugin_id: PLUGIN_ID, entry_id: entry, args }),
+    });
+    if (!createResp.ok) {
+      throw new Error(`HTTP ${createResp.status}: ${await createResp.text()}`);
+    }
+    const runData = await createResp.json();
+    const runId = runData.run_id || runData.id;
+    if (!runId) throw new Error('no run_id');
+
+    const deadline = Date.now() + 60000;
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      const pollResp = await fetch(`${RUNS_URL}/${runId}`);
+      if (!pollResp.ok) continue;
+      const record = await pollResp.json();
+      if (record.status === 'succeeded') {
+        const exportResp = await fetch(`${RUNS_URL}/${runId}/export`);
+        if (!exportResp.ok) return {};
+        const exportData = await exportResp.json();
+        const items = exportData.items || [];
+        const item = items.find((entry) => entry.type === 'json' && entry.json) || items[0];
+        const payload = (item && item.json) || {};
+        if (payload && typeof payload === 'object' && payload.data && typeof payload.data === 'object') {
+          return payload.data;
+        }
+        return payload;
+      }
+      if (['failed', 'canceled', 'timeout'].includes(record.status)) {
+        const reason = (record.error && record.error.message) || record.message || record.status;
+        throw new Error(reason);
+      }
+    }
+    throw new Error('timeout');
+  }
+
+  const el = {
+    baseUrl: document.getElementById('baseUrl'),
+    token: document.getElementById('token'),
+    badge: document.getElementById('statusBadge'),
+    statusText: document.getElementById('statusText'),
+    statEntities: document.getElementById('statEntities'),
+    statAreas: document.getElementById('statAreas'),
+    statVersion: document.getElementById('statVersion'),
+    statLocation: document.getElementById('statLocation'),
+    rows: document.getElementById('deviceRows'),
+    empty: document.getElementById('deviceEmpty'),
+    queryName: document.getElementById('queryName'),
+    message: document.getElementById('statusMessage'),
+  };
+
+  function showMessage(text, kind = 'info') {
+    el.message.textContent = text || '';
+    el.message.className = `status-bar show ${kind}`;
+  }
+
+  function hideMessage() {
+    el.message.className = 'status-bar';
+  }
+
+  function setBusy(busy) {
+    document.querySelectorAll('button').forEach((button) => {
+      button.disabled = busy;
+    });
+    document.body.style.cursor = busy ? 'progress' : '';
+  }
+
+  function stateClass(state) {
+    if (['unavailable', 'unknown'].includes(state)) return 'bad';
+    if (['on', 'open', 'playing', 'cool', 'heat', 'locked'].includes(state)) return 'on';
+    return 'off';
+  }
+
+  function renderConnection(connection) {
+    const configured = Boolean(connection && connection.configured);
+    el.badge.className = configured ? 'badge on' : 'badge';
+    el.statusText.textContent = I18n.t(
+      configured ? 'panel.status.connected' : 'panel.status.disconnected',
+      configured ? '已连接' : '未连接'
+    );
+    if (configured && connection.base_url && !el.baseUrl.value) {
+      el.baseUrl.value = connection.base_url;
+    }
+    el.statVersion.textContent = (connection && connection.ha_version) || '–';
+    el.statLocation.textContent = (connection && connection.location_name) || '–';
+  }
+
+  function renderEntities(entities) {
+    const list = Array.isArray(entities) ? entities : [];
+    el.rows.innerHTML = '';
+    list.slice(0, 300).forEach((entity) => {
+      const tr = document.createElement('tr');
+
+      const nameCell = document.createElement('td');
+      nameCell.textContent = entity.name || entity.entity_id || '';
+      const domainCell = document.createElement('td');
+      domainCell.textContent = entity.area_name || '–';
+      const stateCell = document.createElement('td');
+      stateCell.textContent = entity.state || '';
+      stateCell.className = `state ${stateClass(entity.state)}`;
+      const aliasCell = document.createElement('td');
+      aliasCell.textContent = entity.alias || '';
+
+      tr.append(nameCell, domainCell, stateCell, aliasCell);
+      el.rows.appendChild(tr);
+    });
+    el.empty.style.display = list.length ? 'none' : 'block';
+    el.statEntities.textContent = String(list.length);
+  }
+
+  async function loadStatus() {
+    const data = await callPlugin('get_status', {});
+    renderConnection(data.connection || {});
+    renderEntities(data.entities || []);
+    if (typeof data.area_count === 'number' && data.area_count > 0) {
+      el.statAreas.textContent = String(data.area_count);
+    }
+    if (data.degraded) {
+      showMessage(data.degraded, 'info');
+    }
+    return data;
+  }
+
+  // ── 事件 ──────────────────────────────────────────────────────────────
+  document.getElementById('btnSave').addEventListener('click', async () => {
+    const base_url = el.baseUrl.value.trim();
+    const token = el.token.value.trim();
+    if (!base_url || !token) {
+      showMessage(I18n.t('panel.msg.needFields', '请填写地址与令牌'), 'error');
+      return;
+    }
+    setBusy(true);
+    hideMessage();
+    try {
+      const result = await callPlugin('save_connection', { base_url, token });
+      el.token.value = '';
+      showMessage(result.message || I18n.t('panel.msg.saved', '已保存并连接'), 'ok');
+      await loadStatus();
+    } catch (error) {
+      showMessage(`${I18n.t('panel.msg.failed', '操作失败')}: ${error.message}`, 'error');
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  document.getElementById('btnTest').addEventListener('click', async () => {
+    const base_url = el.baseUrl.value.trim();
+    const token = el.token.value.trim();
+    if (!base_url || !token) {
+      showMessage(I18n.t('panel.msg.needFields', '请填写地址与令牌'), 'error');
+      return;
+    }
+    setBusy(true);
+    hideMessage();
+    try {
+      const result = await callPlugin('test_connection', { base_url, token });
+      showMessage(result.message || I18n.t('panel.msg.tested', '连接成功'), 'ok');
+    } catch (error) {
+      showMessage(`${I18n.t('panel.msg.failed', '操作失败')}: ${error.message}`, 'error');
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  document.getElementById('btnDisconnect').addEventListener('click', async () => {
+    setBusy(true);
+    hideMessage();
+    try {
+      const result = await callPlugin('clear_connection', {});
+      el.token.value = '';
+      renderConnection(null);
+      renderEntities([]);
+      el.statAreas.textContent = '–';
+      showMessage(result.message || I18n.t('panel.msg.disconnected', '已断开连接'), 'ok');
+    } catch (error) {
+      showMessage(`${I18n.t('panel.msg.failed', '操作失败')}: ${error.message}`, 'error');
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  document.getElementById('btnRefresh').addEventListener('click', async () => {
+    setBusy(true);
+    hideMessage();
+    try {
+      await callPlugin('reload_entities', {});
+      await loadStatus();
+      showMessage(I18n.t('panel.msg.tested', '连接成功'), 'ok');
+    } catch (error) {
+      showMessage(`${I18n.t('panel.msg.failed', '操作失败')}: ${error.message}`, 'error');
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  document.getElementById('btnQuery').addEventListener('click', async () => {
+    const name = el.queryName.value.trim();
+    if (!name) return;
+    setBusy(true);
+    hideMessage();
+    try {
+      const result = await callPlugin('query_entity_state', { name });
+      showMessage(result.message || '', 'info');
+    } catch (error) {
+      showMessage(`${I18n.t('panel.msg.failed', '操作失败')}: ${error.message}`, 'error');
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  el.queryName.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') document.getElementById('btnQuery').click();
+  });
+
+  // i18n 就绪后再首次渲染，避免先渲染中文再被覆盖
+  I18n.whenReady(() => {
+    loadStatus().catch((error) => {
+      showMessage(`${I18n.t('panel.msg.failed', '操作失败')}: ${error.message}`, 'error');
+    });
+  });
+</script>
+</body>
+</html>
