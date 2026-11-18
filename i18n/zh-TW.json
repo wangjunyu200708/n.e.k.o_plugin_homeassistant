@@ -20,7 +20,7 @@
   "panel.field.token": "長期存取權杖",
   "panel.hint.encrypted": "權杖已加密保存在本機（{backend}），只有目前使用者能解開。",
   "panel.hint.noEncrypt": "目前系統沒有可用的加密後端，權杖只保存在記憶體中——重新啟動 N.E.K.O 後需要重新填寫。",
-  "panel.hint.token": "權杖只保存在本機，不會上傳。若 HA 與 N.E.K.O 在同一台機器，填 http://127.0.0.1:8123 即可。",
+  "panel.hint.token": "位址已預填 http://127.0.0.1:8123：HA 與 N.E.K.O 在同一台機器就直接用，否則改成它的 IP。權杖只保存在本機，不會上傳。",
   "panel.msg.disconnected": "已中斷連接",
   "panel.msg.failed": "操作失敗",
   "panel.msg.loading": "載入中…",

@@ -20,7 +20,7 @@
   "panel.field.token": "长期访问令牌",
   "panel.hint.encrypted": "令牌已加密保存在本机（{backend}），只有当前用户能解开。",
   "panel.hint.noEncrypt": "当前系统没有可用的加密后端，令牌只保存在内存中——重启 N.E.K.O 后需要重新填写。",
-  "panel.hint.token": "令牌只保存在本机，不会上传。若 HA 与 N.E.K.O 在同一台机器，填 http://127.0.0.1:8123 即可。",
+  "panel.hint.token": "地址已预填 http://127.0.0.1:8123：HA 与 N.E.K.O 在同一台机器就直接用，否则改成它的 IP。令牌只保存在本机，不会上传。",
   "panel.msg.disconnected": "已断开连接",
   "panel.msg.failed": "操作失败",
   "panel.msg.loading": "加载中…",

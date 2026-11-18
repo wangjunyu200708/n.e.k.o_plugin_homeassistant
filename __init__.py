@@ -83,9 +83,14 @@ _LIST_LIMIT = 50
 _READBACK_LIMIT = 20
 
 _NOT_CONFIGURED_HINT = (
-    "还没有连接 Home Assistant。请在插件面板填写 HA 地址（如 http://192.168.1.10:8123）"
+    "还没有连接 Home Assistant。请在插件面板填写 HA 地址（默认已填 http://127.0.0.1:8123）"
     "与长期访问令牌，然后点「保存并连接」。"
 )
+
+# 面板输入框的预填值，也是后端在调用方没给地址时的兜底。
+# HA 与 N.E.K.O 跑在同一台机器是最常见的试用场景，写死本机地址能让这类用户
+# 只需粘贴令牌、点一下保存就接通；HA 在别的机器上改一下 IP 即可。
+DEFAULT_BASE_URL = "http://127.0.0.1:8123"
 
 _CONFIRM_HINT = (
     "这是高危动作，尚未执行。请把 summary 中的设备、动作与参数转述给用户，"
@@ -759,8 +764,9 @@ class HomeAssistantPlugin(NekoPluginBase):
     )
     async def test_connection(self, base_url: str = "", token: str = "", **_):
         """只探测不保存。面板的"测试连接"按钮调这个。"""
-        if not base_url or not token:
-            return _err("missing_parameter", "请填写 Home Assistant 地址与令牌")
+        base_url = (base_url or "").strip() or DEFAULT_BASE_URL
+        if not token:
+            return _err("missing_parameter", "请填写长期访问令牌")
         try:
             info = await probe_connection(base_url, token)
         except HaAuthError as exc:
@@ -794,8 +800,9 @@ class HomeAssistantPlugin(NekoPluginBase):
     )
     async def save_connection(self, base_url: str = "", token: str = "", **_):
         """保存前**必须**探活：存下连不上的地址，之后每次控制都要等一次超时。"""
-        if not base_url or not token:
-            return _err("missing_parameter", "请填写 Home Assistant 地址与令牌")
+        base_url = (base_url or "").strip() or DEFAULT_BASE_URL
+        if not token:
+            return _err("missing_parameter", "请填写长期访问令牌")
         try:
             info = await probe_connection(base_url, token)
         except HaAuthError as exc:

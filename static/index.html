@@ -139,6 +139,7 @@
     <label>
       <span data-i18n="panel.field.baseUrl">Home Assistant 地址</span>
       <input id="baseUrl" type="text" autocomplete="off" spellcheck="false"
+             value="http://127.0.0.1:8123"
              placeholder="http://192.168.1.10:8123" data-i18n-placeholder="panel.ph.baseUrl">
     </label>
     <label>
@@ -267,6 +268,17 @@
     tokenHint: document.getElementById('tokenHint'),
   };
 
+  // 输入框的初值就是默认地址：同一台机器跑 HA 的用户点一下「保存并连接」即可。
+  // 从这里读而不是再写一份字面量，避免两处漂移。
+  const DEFAULT_BASE_URL = el.baseUrl.value;
+
+  // 用户是否动过地址栏。动过之后就不再让 renderConnection 覆盖它，
+  // 否则点「刷新设备」会把没保存的编辑冲掉。
+  let baseUrlDirty = false;
+  el.baseUrl.addEventListener('input', () => {
+    baseUrlDirty = true;
+  });
+
   function showMessage(text, kind = 'info') {
     el.message.textContent = text || '';
     el.message.className = `status-bar show ${kind}`;
@@ -296,7 +308,9 @@
       configured ? 'panel.status.connected' : 'panel.status.disconnected',
       configured ? '已连接' : '未连接'
     );
-    if (configured && connection.base_url && !el.baseUrl.value) {
+    // 已保存的地址要覆盖**预填的默认值**，但不能覆盖用户正在输入的新地址——
+    // 点「刷新设备」会走一遍 renderConnection，无脑赋值会把没保存的编辑冲掉。
+    if (configured && connection.base_url && !baseUrlDirty) {
       el.baseUrl.value = connection.base_url;
     }
     el.statVersion.textContent = (connection && connection.ha_version) || '–';
@@ -420,6 +434,8 @@
     try {
       const result = await callPlugin('save_connection', { base_url, token });
       el.token.value = '';
+      // 保存成功后让后端规范化过的地址回填进来（例如去掉末尾斜杠）。
+      baseUrlDirty = false;
       showMessage(result.message || I18n.t('panel.msg.saved', '已保存并连接'), 'ok');
       await loadStatus();
     } catch (error) {
@@ -454,6 +470,8 @@
     try {
       const result = await callPlugin('clear_connection', {});
       el.token.value = '';
+      baseUrlDirty = false;
+      el.baseUrl.value = DEFAULT_BASE_URL;
       renderConnection(null);
       renderEntities([]);
       el.statAreas.textContent = '–';

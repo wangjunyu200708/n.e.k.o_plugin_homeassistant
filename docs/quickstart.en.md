@@ -31,7 +31,7 @@ Strip the trailing page path so only `scheme://host:port` remains. For example `
 ## 2. Connect
 
 1. Open N.E.K.O → plugin panel → **Home Assistant Smart Home**
-2. Enter the address and token
+2. Confirm the address — it is pre-filled with `http://127.0.0.1:8123`; change it to the HA host's IP if HA runs elsewhere. Then paste the token
 3. Click **Test connection** — you should see the HA version, entity count, and whether the user is an admin
 4. Click **Save**
 

@@ -20,7 +20,7 @@
   "panel.field.token": "長期アクセストークン",
   "panel.hint.encrypted": "トークンはこのマシンに暗号化して保存されています（{backend}）。復号できるのは現在のユーザーだけです。",
   "panel.hint.noEncrypt": "このシステムには利用可能な暗号化バックエンドがないため、トークンはメモリ上にのみ保持されます。N.E.K.O の再起動後に再入力が必要です。",
-  "panel.hint.token": "トークンはこの端末内にのみ保存されます。HA が N.E.K.O と同じ PC なら http://127.0.0.1:8123 を使えます。",
+  "panel.hint.token": "アドレスは http://127.0.0.1:8123 で埋まっています。HA が同じマシンならそのまま、別のマシンならその IP に変更してください。トークンはこのマシン内にのみ保存され、送信されません。",
   "panel.msg.disconnected": "切断しました",
   "panel.msg.failed": "操作に失敗しました",
   "panel.msg.loading": "読み込み中…",

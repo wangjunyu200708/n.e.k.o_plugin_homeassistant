@@ -20,7 +20,7 @@
   "panel.field.token": "장기 액세스 토큰",
   "panel.hint.encrypted": "토큰은 이 컴퓨터에 암호화되어 저장됩니다({backend}). 현재 사용자만 복호화할 수 있습니다.",
   "panel.hint.noEncrypt": "이 시스템에는 사용 가능한 암호화 백엔드가 없어 토큰이 메모리에만 보관됩니다. N.E.K.O를 다시 시작하면 다시 입력해야 합니다.",
-  "panel.hint.token": "토큰은 이 기기에만 저장됩니다. HA가 N.E.K.O와 같은 PC라면 http://127.0.0.1:8123 을 사용하세요.",
+  "panel.hint.token": "주소는 http://127.0.0.1:8123 으로 채워져 있습니다. HA가 같은 PC라면 그대로 두고, 아니면 해당 IP로 바꾸세요. 토큰은 이 PC에만 저장되며 전송되지 않습니다.",
   "panel.msg.disconnected": "연결을 해제했습니다",
   "panel.msg.failed": "작업 실패",
   "panel.msg.loading": "불러오는 중…",

@@ -20,7 +20,7 @@
   "panel.field.token": "Long-lived access token",
   "panel.hint.encrypted": "The token is stored encrypted on this machine ({backend}); only your user account can decrypt it.",
   "panel.hint.noEncrypt": "No encryption backend is available on this system, so the token is kept in memory only — you will need to re-enter it after restarting N.E.K.O.",
-  "panel.hint.token": "The token stays on this machine. If HA runs on the same PC as N.E.K.O, use http://127.0.0.1:8123.",
+  "panel.hint.token": "The address is pre-filled with http://127.0.0.1:8123 — keep it if HA runs on this same machine, otherwise use its IP. The token stays on this machine and is never uploaded.",
   "panel.msg.disconnected": "Disconnected",
   "panel.msg.failed": "Operation failed",
   "panel.msg.loading": "Loading…",

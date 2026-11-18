@@ -129,3 +129,50 @@ class TestRest:
         with pytest.raises(HaServiceError) as exc:
             await rest.call_service("light", "turn_on", {})
         assert "light.turn_on" in str(exc.value)
+
+
+class TestDefaultBaseUrl:
+    """地址留空时兜底到本机 8123——面板预填的就是它。"""
+
+    async def test_test_connection_uses_default_when_empty(self, plugin_module, monkeypatch):
+        seen = {}
+
+        async def fake_probe(base_url, token, **_kwargs):
+            seen["base_url"] = base_url
+            raise plugin_module.HaConnectionError("stop here")
+
+        monkeypatch.setattr(plugin_module, "probe_connection", fake_probe)
+        plugin = plugin_module.HomeAssistantPlugin(None)
+        out = await plugin.test_connection(base_url="", token="tok")
+        assert seen["base_url"] == plugin_module.DEFAULT_BASE_URL
+        assert not out.is_ok()
+
+    async def test_save_connection_uses_default_when_blank(self, plugin_module, monkeypatch):
+        seen = {}
+
+        async def fake_probe(base_url, token, **_kwargs):
+            seen["base_url"] = base_url
+            raise plugin_module.HaConnectionError("stop here")
+
+        monkeypatch.setattr(plugin_module, "probe_connection", fake_probe)
+        plugin = plugin_module.HomeAssistantPlugin(None)
+        await plugin.save_connection(base_url="   ", token="tok")
+        assert seen["base_url"] == plugin_module.DEFAULT_BASE_URL
+
+    async def test_token_still_required(self, plugin_module):
+        plugin = plugin_module.HomeAssistantPlugin(None)
+        out = await plugin.test_connection(base_url="http://h:8123", token="")
+        assert not out.is_ok()
+        assert out.error.code == "missing_parameter"
+
+    async def test_explicit_url_wins(self, plugin_module, monkeypatch):
+        seen = {}
+
+        async def fake_probe(base_url, token, **_kwargs):
+            seen["base_url"] = base_url
+            raise plugin_module.HaConnectionError("stop here")
+
+        monkeypatch.setattr(plugin_module, "probe_connection", fake_probe)
+        plugin = plugin_module.HomeAssistantPlugin(None)
+        await plugin.test_connection(base_url="http://192.168.1.50:8123", token="tok")
+        assert seen["base_url"] == "http://192.168.1.50:8123"

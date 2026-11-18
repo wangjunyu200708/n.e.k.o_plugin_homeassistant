@@ -31,7 +31,7 @@ Remova o **caminho da página** no final, deixando apenas `esquema://host:porta`
 ## 2. Conectar
 
 1. Abra o N.E.K.O → painel de plugins → **Home Assistant · Casa inteligente**
-2. Informe endereço e token
+2. Confirme o endereço — já vem preenchido com `http://127.0.0.1:8123`; troque pelo IP da máquina do HA se não for esta. Em seguida cole o token
 3. Clique em **«Testar conexão»** — aparecerão a versão do HA, a quantidade de entidades e se o usuário é administrador
 4. Clique em **«Salvar»**
 
