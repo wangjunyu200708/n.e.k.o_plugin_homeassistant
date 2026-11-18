@@ -185,7 +185,7 @@ secret_store.py  DPAPI / 钥匙串 / 内存 三级令牌存储
 i18n/            8 语言 × 103 key
 static/          托管面板 index.html + 共用 i18n.js
 docs/            quickstart 引导（8 语言）
-tests/           253 项
+tests/           259 项
 ```
 
 ## 许可
